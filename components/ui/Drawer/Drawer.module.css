@@ -73,4 +73,16 @@
     max-height: 90vh;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
+
+  /* Grab handle from the mobile design; decorative, the sheet closes via the button or backdrop. */
+  .panel::before {
+    content: '';
+    align-self: center;
+    flex-shrink: 0;
+    width: var(--space-10);
+    height: var(--space-1);
+    margin-top: var(--space-2);
+    border-radius: var(--radius-full);
+    background: var(--color-border-strong);
+  }
 }

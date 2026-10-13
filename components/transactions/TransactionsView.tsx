@@ -1,6 +1,7 @@
 'use client'
-import { useCallback, useEffect, useRef } from 'react'
-import { Button, Card, EmptyState, Pagination, Skeleton } from '@/components/ui'
+import { useCallback, useEffect, useRef, type ReactNode } from 'react'
+import type { Transaction } from '@/types/api'
+import { Button, Card, Drawer, EmptyState, Pagination, Skeleton } from '@/components/ui'
 import {
   hasActiveFilters,
   hasInvalidDateRange,
@@ -8,7 +9,8 @@ import {
   withoutFilters,
   type TransactionsState,
 } from '@/lib/transactions/query-state'
-import { useTransactions } from '@/lib/transactions/queries'
+import { useTransaction, useTransactions } from '@/lib/transactions/queries'
+import { TransactionDetails, TransactionDetailsSkeleton } from './TransactionDetails'
 import { TransactionList, TransactionListSkeleton } from './TransactionList'
 import { TransactionsFilters, TransactionsFiltersSkeleton } from './TransactionsFilters'
 import { useSearchDraft } from './useSearchDraft'
@@ -25,7 +27,7 @@ function countLabel(total: number, filtered: boolean) {
 
 /** Everything below the page title. Reads the URL, so it renders inside a Suspense boundary. */
 export function TransactionsView() {
-  const { state, navigate } = useTransactionsUrl()
+  const { state, navigate, back } = useTransactionsUrl()
   const commitSearch = useCallback(
     (q: string) => navigate(withFilters(state, { q }), 'replace'),
     [state, navigate]
@@ -48,6 +50,23 @@ export function TransactionsView() {
   useEffect(() => {
     if (isOutOfRange && meta) navigate({ ...state, page: meta.totalPages }, 'replace')
   }, [isOutOfRange, meta, state, navigate])
+
+  // Opening details pushes a history entry, so closing it should step back over that entry rather
+  // than add another (or Back would reopen the drawer). A drawer that came from a link or a refresh
+  // has no entry of ours behind it, so it closes by replacing the URL instead.
+  const pushedDetails = useRef(false)
+  const openDetails = (tx: Transaction) => {
+    pushedDetails.current = true
+    navigate({ ...state, txn: tx.id })
+  }
+  const closeDetails = () => {
+    if (pushedDetails.current) {
+      pushedDetails.current = false
+      back()
+    } else {
+      navigate({ ...state, txn: null }, 'replace')
+    }
+  }
 
   const resultsRef = useRef<HTMLDivElement>(null)
   const goToPage = (page: number) => {
@@ -91,9 +110,12 @@ export function TransactionsView() {
           isOutOfRange={isOutOfRange}
           onClearFilters={clearFilters}
           onPageChange={goToPage}
+          onSelect={openDetails}
           navigate={navigate}
         />
       </div>
+
+      <TransactionDrawer id={state.txn} onClose={closeDetails} />
     </>
   )
 }
@@ -105,6 +127,7 @@ interface TransactionsContentProps {
   isOutOfRange: boolean
   onClearFilters: () => void
   onPageChange: (page: number) => void
+  onSelect: (transaction: Transaction) => void
   navigate: ReturnType<typeof useTransactionsUrl>['navigate']
 }
 
@@ -115,6 +138,7 @@ function TransactionsContent({
   isOutOfRange,
   onClearFilters,
   onPageChange,
+  onSelect,
   navigate,
 }: TransactionsContentProps) {
   // Only reachable from a hand-edited URL: the page has no date inputs. Never fetched (see useTransactions).
@@ -201,6 +225,7 @@ function TransactionsContent({
         // server meant by "today" closely enough for a list that refetches every 30 s at most.
         now={new Date(query.dataUpdatedAt)}
         isStale={query.isPlaceholderData}
+        onSelect={onSelect}
       />
       <div className={styles.footer}>
         <p className={styles.range}>
@@ -210,6 +235,57 @@ function TransactionsContent({
         <Pagination page={state.page} totalPages={totalPages} onPageChange={onPageChange} />
       </div>
     </>
+  )
+}
+
+/**
+ * Details for the transaction in the URL. Opening a row on screen renders instantly from the list
+ * cache; a link or refresh fetches it (useTransaction), so it works whatever page is showing.
+ */
+function TransactionDrawer({ id, onClose }: { id: string | null; onClose: () => void }) {
+  const query = useTransaction(id)
+
+  let body: ReactNode
+  // Not found wins over a cached copy: the row may have been on a list fetched before it went away.
+  if (query.isNotFound) {
+    body = (
+      <EmptyState
+        icon="search"
+        role="status"
+        title="Transaction not found"
+        description="It may have been removed, or the link is wrong."
+        action={
+          <Button variant="secondary" onClick={onClose}>
+            Back to transactions
+          </Button>
+        }
+      />
+    )
+  } else if (query.data) {
+    body = <TransactionDetails transaction={query.data} />
+  } else if (query.isError) {
+    body = (
+      <EmptyState
+        icon="alert"
+        tone="danger"
+        role="alert"
+        title="We couldn't load this transaction"
+        description="Check your connection and try again."
+        action={
+          <Button iconLeft="refresh" onClick={() => void query.refetch()} disabled={query.isFetching}>
+            Try again
+          </Button>
+        }
+      />
+    )
+  } else {
+    body = <TransactionDetailsSkeleton />
+  }
+
+  return (
+    <Drawer open={id !== null} title="Transaction details" onClose={onClose}>
+      {body}
+    </Drawer>
   )
 }
 

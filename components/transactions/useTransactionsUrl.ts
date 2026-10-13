@@ -37,5 +37,7 @@ export function useTransactionsUrl() {
       router.replace(canonical ? `${pathname}?${canonical}` : pathname, { scroll: false })
   }, [state, current, router, pathname])
 
-  return { state, navigate }
+  const back = useCallback(() => router.back(), [router])
+
+  return { state, navigate, back }
 }

@@ -3,10 +3,10 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { Paginated, Transaction } from '@/types/api'
 import { ApiError } from '@/lib/api/client'
-import { getTransactions } from '@/lib/api/endpoints'
+import { getTransaction, getTransactions } from '@/lib/api/endpoints'
 import { TransactionsView } from './TransactionsView'
 
-const router = { push: vi.fn(), replace: vi.fn() }
+const router = { push: vi.fn(), replace: vi.fn(), back: vi.fn() }
 let search = ''
 
 vi.mock('next/navigation', () => ({
@@ -17,6 +17,7 @@ vi.mock('next/navigation', () => ({
 vi.mock('@/lib/api/endpoints', () => ({ getTransactions: vi.fn(), getTransaction: vi.fn() }))
 
 const listMock = vi.mocked(getTransactions)
+const detailMock = vi.mocked(getTransaction)
 
 const tx = (id: string, overrides: Partial<Transaction> = {}): Transaction => ({
   id,
@@ -39,7 +40,8 @@ const response = (rows: Transaction[], total = rows.length): Paginated<Transacti
 
 function renderAt(query: string) {
   search = query
-  const client = new QueryClient({ defaultOptions: { queries: { retryDelay: 0 } } })
+  // Same staleTime as app/providers.tsx, so cache behaviour matches the app; no retry delay.
+  const client = new QueryClient({ defaultOptions: { queries: { retryDelay: 0, staleTime: 30_000 } } })
   const ui = () => (
     <QueryClientProvider client={client}>
       <TransactionsView />
@@ -52,7 +54,9 @@ function renderAt(query: string) {
 beforeEach(() => {
   router.push.mockReset()
   router.replace.mockReset()
+  router.back.mockReset()
   listMock.mockReset()
+  detailMock.mockReset()
 })
 
 describe('TransactionsView', () => {
@@ -287,5 +291,98 @@ describe('TransactionsView pagination', () => {
 
     expect(await screen.findByText('Showing 1–4 of 4')).toBeInTheDocument()
     expect(screen.queryByRole('navigation', { name: 'Pagination' })).toBeNull()
+  })
+})
+
+describe('TransactionsView details drawer', () => {
+  it('opens a row by pushing ?txn= and keeping every other param', async () => {
+    listMock.mockResolvedValue(response([tx('a', { reference: 'ACM-AAA' })]))
+    renderAt('status=successful&page=2&__scenario=slow')
+
+    await userEvent.click(await screen.findByRole('button', { name: /Card payment - Netflix/ }))
+
+    expect(router.push).toHaveBeenCalledWith('/transactions?status=successful&page=2&txn=a&__scenario=slow', {
+      scroll: false,
+    })
+  })
+
+  it('renders a row from the list instantly, without fetching it again', async () => {
+    listMock.mockResolvedValue(response([tx('a', { reference: 'ACM-AAA' })]))
+    const { navigateTo } = renderAt('')
+    await screen.findByText('Card payment - Netflix')
+
+    navigateTo('txn=a')
+
+    const dialog = screen.getByRole('dialog', { name: 'Transaction details' })
+    expect(within(dialog).getByText('ACM-AAA')).toBeInTheDocument()
+    expect(detailMock).not.toHaveBeenCalled()
+  })
+
+  it('closes a drawer it opened by going back, so Back does not reopen it', async () => {
+    listMock.mockResolvedValue(response([tx('a')]))
+    const { navigateTo } = renderAt('')
+    await userEvent.click(await screen.findByRole('button', { name: /Card payment - Netflix/ }))
+    navigateTo('txn=a') // the push lands
+
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+
+    expect(router.back).toHaveBeenCalledTimes(1)
+    expect(router.replace).not.toHaveBeenCalled()
+  })
+
+  it('works from a deep link to a row that is not on the current page, and closes by replacing', async () => {
+    listMock.mockResolvedValue(response([tx('a')]))
+    detailMock.mockResolvedValue({
+      data: tx('far', { reference: 'ACM-FAR', narration: 'Wallet top-up via bank transfer' }),
+    })
+    renderAt('txn=far&status=successful')
+
+    const dialog = await screen.findByRole('dialog', { name: 'Transaction details' })
+    expect(await within(dialog).findByText('ACM-FAR')).toBeInTheDocument()
+    expect(detailMock).toHaveBeenCalledWith('far', { signal: expect.any(AbortSignal) })
+
+    await userEvent.keyboard('{Escape}')
+
+    expect(router.back).not.toHaveBeenCalled()
+    expect(router.replace).toHaveBeenCalledWith('/transactions?status=successful', { scroll: false })
+  })
+
+  it('shows a loading state in the drawer while a deep-linked transaction loads', async () => {
+    listMock.mockResolvedValue(response([tx('a')]))
+    detailMock.mockReturnValue(new Promise(() => {}))
+    renderAt('txn=far')
+
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByText('Loading transaction')).toBeInTheDocument()
+  })
+
+  it('shows "Transaction not found" for an unknown id, with a way back', async () => {
+    listMock.mockResolvedValue(response([tx('a')]))
+    detailMock.mockRejectedValue(new ApiError(404, 'NOT_FOUND', 'Transaction bogus not found'))
+    renderAt('txn=bogus')
+
+    const dialog = await screen.findByRole('dialog')
+    expect(await within(dialog).findByText('Transaction not found')).toBeInTheDocument()
+    expect(within(dialog).getByText('It may have been removed, or the link is wrong.')).toBeInTheDocument()
+    expect(detailMock).toHaveBeenCalledTimes(1)
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Back to transactions' }))
+    expect(router.replace).toHaveBeenCalledWith('/transactions', { scroll: false })
+  })
+
+  it('shows an error with a retry inside the drawer', async () => {
+    listMock.mockResolvedValue(response([tx('a')]))
+    detailMock.mockRejectedValue(
+      new ApiError(500, 'INTERNAL_ERROR', 'Something went wrong. Please try again.')
+    )
+    renderAt('txn=far')
+
+    const dialog = await screen.findByRole('dialog')
+    expect(await within(dialog).findByText("We couldn't load this transaction")).toBeInTheDocument()
+
+    detailMock.mockResolvedValue({ data: tx('far', { reference: 'ACM-FAR' }) })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Try again' }))
+
+    expect(await within(dialog).findByText('ACM-FAR')).toBeInTheDocument()
   })
 })
