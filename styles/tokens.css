@@ -82,6 +82,8 @@
   --layout-gutter: var(--space-5);
   --navbar-height: 64px;
   --drawer-width: 440px;
+  /* Not a design variable: the minimum tap size for touch (WCAG 2.5.5, iOS/Android guidelines). */
+  --touch-target: 44px;
 
   /* Motion */
   --duration-fast: 120ms;

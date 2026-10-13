@@ -129,3 +129,9 @@
   justify-self: end;
   width: calc(var(--space-12) * 2);
 }
+
+@media (max-width: 640px), (pointer: coarse) {
+  .reference .copy {
+    width: var(--touch-target);
+  }
+}

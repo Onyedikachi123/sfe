@@ -40,3 +40,11 @@
 .invalid {
   border-color: var(--color-danger);
 }
+
+@media (max-width: 640px), (pointer: coarse) {
+  .input {
+    height: var(--touch-target);
+    /* iOS zooms the page when a focused field is under 16px; 1rem is that platform threshold. */
+    font-size: max(var(--text-md), 1rem);
+  }
+}

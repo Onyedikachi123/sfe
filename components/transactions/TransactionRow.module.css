@@ -72,3 +72,39 @@
   color: var(--color-text-subtle);
   white-space: nowrap;
 }
+
+/* Mobile design: amount on top and status beneath it on the right; grouped rows drop the time. */
+@media (max-width: 640px) {
+  .row {
+    grid-template-columns: var(--space-10) minmax(0, 1fr) auto;
+    grid-template-areas:
+      'avatar main end'
+      'avatar main status';
+    column-gap: var(--space-3);
+    row-gap: var(--space-1);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .avatar {
+    grid-area: avatar;
+    align-self: center;
+  }
+
+  .main {
+    grid-area: main;
+    align-self: center;
+  }
+
+  .end {
+    grid-area: end;
+  }
+
+  .status {
+    grid-area: status;
+    justify-self: end;
+  }
+
+  .grouped .meta {
+    display: none;
+  }
+}

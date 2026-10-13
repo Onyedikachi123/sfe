@@ -53,3 +53,9 @@
     display: inline;
   }
 }
+
+@media (max-width: 640px), (pointer: coarse) {
+  .number {
+    min-width: var(--touch-target);
+  }
+}

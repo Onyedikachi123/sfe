@@ -114,3 +114,10 @@
 section + section > .day {
   border-top: 1px solid var(--color-border);
 }
+
+@media (max-width: 640px) {
+  .day,
+  .skeletonRow {
+    padding-inline: var(--space-4);
+  }
+}

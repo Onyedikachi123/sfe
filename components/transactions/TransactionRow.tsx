@@ -1,5 +1,6 @@
 import type { Transaction } from '@/types/api'
 import { Money } from '@/components/ui'
+import { cx } from '@/lib/cx'
 import { formatDateTime, formatMoney, formatTime, TRANSACTION_TYPE_LABELS } from '@/lib/format'
 import { isCredit } from '@/lib/transactions/direction'
 import { StatusBadge } from './StatusBadge'
@@ -20,8 +21,12 @@ export function TransactionRow({ transaction: tx, onSelect, variant = 'standalon
   const credit = isCredit(tx.type)
 
   return (
-    <button type="button" className={styles.row} onClick={() => onSelect?.(tx)}>
-      <TransactionAvatar transaction={tx} />
+    <button
+      type="button"
+      className={cx(styles.row, variant === 'grouped' && styles.grouped)}
+      onClick={() => onSelect?.(tx)}
+    >
+      <TransactionAvatar transaction={tx} className={styles.avatar} />
       <span className={styles.main}>
         <span className={styles.title}>{TRANSACTION_TYPE_LABELS[tx.type]}</span>
         <span className={styles.narration}>{tx.narration}</span>

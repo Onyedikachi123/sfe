@@ -42,4 +42,9 @@
   .range {
     display: none;
   }
+
+  /* The navbar gains a row of tabs on mobile, so clear that too. */
+  .results {
+    scroll-margin-top: calc(var(--navbar-height) + var(--touch-target) + var(--space-4));
+  }
 }
