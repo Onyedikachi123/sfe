@@ -7,6 +7,8 @@ export interface ButtonProps {
   children?: ReactNode
   variant?: 'primary' | 'secondary' | 'ghost'
   size?: 'sm' | 'md'
+  /** Defaults to "button" so a Button inside a form never submits it by accident. */
+  type?: 'button' | 'submit' | 'reset'
   iconLeft?: IconName
   iconRight?: IconName
   fullWidth?: boolean
@@ -20,6 +22,7 @@ export function Button({
   children,
   variant = 'primary',
   size = 'md',
+  type = 'button',
   iconLeft,
   iconRight,
   fullWidth,
@@ -29,7 +32,9 @@ export function Button({
   ...rest
 }: ButtonProps) {
   return (
-    <div
+    <button
+      type={type}
+      disabled={disabled}
       className={cx(
         styles.button,
         styles[variant],
@@ -38,12 +43,12 @@ export function Button({
         disabled && styles.disabled,
         className
       )}
-      onClick={disabled ? undefined : onClick}
+      onClick={onClick}
       {...rest}
     >
       {iconLeft && <Icon name={iconLeft} size={16} />}
       {children}
       {iconRight && <Icon name={iconRight} size={16} />}
-    </div>
+    </button>
   )
 }
