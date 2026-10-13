@@ -31,7 +31,7 @@ export function TransactionRow({ transaction: tx, onSelect }: TransactionRowProp
       </span>
       <span className={styles.main}>
         <span className={styles.title}>{TRANSACTION_TYPE_LABELS[tx.type]}</span>
-        <span className={styles.narration} dangerouslySetInnerHTML={{ __html: tx.narration }} />
+        <span className={styles.narration}>{tx.narration}</span>
       </span>
       <StatusDot status={tx.status} />
       <span className={styles.end}>
