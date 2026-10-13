@@ -9,6 +9,22 @@ export type TransactionType =
 
 export type TransactionStatus = 'successful' | 'pending' | 'failed'
 
+export const TRANSACTION_TYPES = [
+  'deposit',
+  'withdrawal',
+  'transfer_in',
+  'transfer_out',
+  'conversion',
+  'card_payment',
+  'bill_payment',
+] as const satisfies readonly TransactionType[]
+
+export const TRANSACTION_STATUSES = [
+  'successful',
+  'pending',
+  'failed',
+] as const satisfies readonly TransactionStatus[]
+
 export interface Transaction {
   id: string
   reference: string
