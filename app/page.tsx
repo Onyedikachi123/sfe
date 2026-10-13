@@ -12,22 +12,32 @@ export default function DashboardPage() {
   useEffect(() => {
     getMe()
       .then((res) => setUser(res.data))
+      // A failed load leaves `user` unset; the error message below covers it.
+      .catch(() => {})
       .finally(() => setIsLoading(false))
   }, [])
 
   if (isLoading) return <p className={styles.loading}>Loading…</p>
 
+  if (!user) {
+    return (
+      <p className={styles.loading} role="alert">
+        We couldn&apos;t load your account. Please refresh the page to try again.
+      </p>
+    )
+  }
+
   return (
     <div className={styles.page}>
       <header>
-        <h1 className={styles.title}>Welcome back, {user!.firstName}</h1>
+        <h1 className={styles.title}>Welcome back, {user.firstName}</h1>
         <p className={styles.subtitle}>Here&apos;s what&apos;s happening with your money today.</p>
       </header>
 
-      <BalanceSummary wallets={user!.wallets} />
+      <BalanceSummary wallets={user.wallets} />
 
       <div className={styles.wallets}>
-        {user!.wallets.map((wallet) => (
+        {user.wallets.map((wallet) => (
           <WalletCard key={wallet.currency} wallet={wallet} />
         ))}
       </div>

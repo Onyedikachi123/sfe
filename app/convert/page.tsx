@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import type { ApiErrorBody, Conversion, Currency, Rate, User } from '@/types/api'
+import type { Conversion, Currency, Rate, User } from '@/types/api'
 import { CURRENCIES } from '@/types/api'
 import { Button, Card, Input, Money, Select } from '@/components/ui'
 import { convert, getMe, getRate } from '@/lib/api/endpoints'
@@ -18,14 +18,27 @@ export default function ConvertPage() {
   const [submitting, setSubmitting] = useState(false)
 
   const [user, setUser] = useState<User>()
+  const [userError, setUserError] = useState(false)
   const [rate, setRate] = useState<Rate>()
+  const [rateError, setRateError] = useState(false)
 
   useEffect(() => {
-    getMe().then((res) => setUser(res.data))
+    getMe()
+      .then((res) => setUser(res.data))
+      .catch(() => setUserError(true))
   }, [])
 
   useEffect(() => {
-    getRate(from, to).then((res) => setRate(res.data))
+    getRate(from, to)
+      .then((res) => {
+        setRate(res.data)
+        setRateError(false)
+      })
+      .catch(() => {
+        // Never leave the previous pair's rate on screen next to the new currencies.
+        setRate(undefined)
+        setRateError(true)
+      })
   }, [from, to])
 
   const value = parseMoney(amount, from) ?? 0
@@ -39,16 +52,9 @@ export default function ConvertPage() {
     setError('')
     setSubmitting(true)
     try {
-      // The client doesn't throw on 4xx/5xx, so check for an error body.
-      const res = (await convert({ from, to, amount: value })) as Partial<ApiErrorBody> & {
-        data?: Conversion
-      }
-      if (res.error) {
-        setError(res.error.message)
-      } else if (res.data) {
-        setResult(res.data)
-        setAmount('')
-      }
+      const res = await convert({ from, to, amount: value })
+      setResult(res.data)
+      setAmount('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
@@ -81,6 +87,8 @@ export default function ConvertPage() {
                 <>
                   Balance: <Money amount={wallet.balance} currency={from} />
                 </>
+              ) : userError ? (
+                'Balance unavailable'
               ) : (
                 'Balance: …'
               )
@@ -100,7 +108,7 @@ export default function ConvertPage() {
         <dl className={styles.summary}>
           <div className={styles.summaryRow}>
             <dt>Rate</dt>
-            <dd>{rate ? `1 ${from} = ${rate.rate} ${to}` : '…'}</dd>
+            <dd>{rate ? `1 ${from} = ${rate.rate} ${to}` : rateError ? 'Unavailable' : '…'}</dd>
           </div>
           <div className={styles.summaryRow}>
             <dt>Fee (1.5%)</dt>
