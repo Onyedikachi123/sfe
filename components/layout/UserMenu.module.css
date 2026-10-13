@@ -54,3 +54,10 @@
     display: none;
   }
 }
+
+@media (max-width: 640px), (pointer: coarse) {
+  .trigger {
+    min-width: var(--touch-target);
+    min-height: var(--touch-target);
+  }
+}

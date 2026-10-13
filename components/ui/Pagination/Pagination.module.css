@@ -1,0 +1,61 @@
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pages {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  list-style: none;
+}
+
+.number {
+  min-width: var(--space-8);
+}
+
+/* Unselected numbers read as plain text, like the design. Two classes so it reliably beats the
+   ghost Button colour, whatever order the stylesheets load in. */
+.pages .idle {
+  color: var(--color-text);
+}
+
+.gap {
+  min-width: var(--space-6);
+  text-align: center;
+  color: var(--color-text-subtle);
+}
+
+.position {
+  display: none;
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.narrow {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .pagination {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .pages,
+  .wide {
+    display: none;
+  }
+
+  .position,
+  .narrow {
+    display: inline;
+  }
+}
+
+@media (max-width: 640px), (pointer: coarse) {
+  .number {
+    min-width: var(--touch-target);
+  }
+}

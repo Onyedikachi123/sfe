@@ -16,7 +16,10 @@ export function UserMenu() {
   const [user, setUser] = useState<User>()
 
   useEffect(() => {
-    getMe().then((res) => setUser(res.data))
+    getMe()
+      .then((res) => setUser(res.data))
+      // Without a user the trigger still renders the placeholder avatar, which is enough here.
+      .catch(() => {})
   }, [])
 
   return (

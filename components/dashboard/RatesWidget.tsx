@@ -10,11 +10,12 @@ const QUOTES: Currency[] = ['USD', 'GHS']
 
 export function RatesWidget({ base }: { base: Currency }) {
   const [rates, setRates] = useState<Rate[]>()
+  const [hasError, setHasError] = useState(false)
 
   useEffect(() => {
-    Promise.all(QUOTES.map((quote) => getRate(quote, base))).then((results) =>
-      setRates(results.map((res) => res.data))
-    )
+    Promise.all(QUOTES.map((quote) => getRate(quote, base)))
+      .then((results) => setRates(results.map((res) => res.data)))
+      .catch(() => setHasError(true))
   }, [base])
   const updatedAt = rates?.[0]?.updatedAt
 
@@ -33,6 +34,11 @@ export function RatesWidget({ base }: { base: Currency }) {
         })}
       </dl>
       {updatedAt && <p className={styles.updated}>Updated {formatTime(updatedAt)}</p>}
+      {hasError && (
+        <p className={styles.updated} role="alert">
+          Rates are unavailable right now.
+        </p>
+      )}
     </Card>
   )
 }

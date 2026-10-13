@@ -1,6 +1,10 @@
 .row {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) auto auto;
+  /* Fixed status and amount columns keep the badges aligned down the list, as in the design. */
+  grid-template-columns: var(--space-10) minmax(0, 1fr) calc(var(--space-12) * 2) minmax(
+      calc(var(--space-10) * 4),
+      auto
+    );
   align-items: center;
   gap: var(--space-4);
   width: 100%;
@@ -21,15 +25,8 @@
   background: var(--color-bg-subtle);
 }
 
-.icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-full);
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
+.status {
+  justify-self: start;
 }
 
 .main {
@@ -74,4 +71,40 @@
   font-size: var(--text-xs);
   color: var(--color-text-subtle);
   white-space: nowrap;
+}
+
+/* Mobile design: amount on top and status beneath it on the right; grouped rows drop the time. */
+@media (max-width: 640px) {
+  .row {
+    grid-template-columns: var(--space-10) minmax(0, 1fr) auto;
+    grid-template-areas:
+      'avatar main end'
+      'avatar main status';
+    column-gap: var(--space-3);
+    row-gap: var(--space-1);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .avatar {
+    grid-area: avatar;
+    align-self: center;
+  }
+
+  .main {
+    grid-area: main;
+    align-self: center;
+  }
+
+  .end {
+    grid-area: end;
+  }
+
+  .status {
+    grid-area: status;
+    justify-self: end;
+  }
+
+  .grouped .meta {
+    display: none;
+  }
 }

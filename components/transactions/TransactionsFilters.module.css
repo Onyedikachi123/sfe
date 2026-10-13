@@ -1,0 +1,48 @@
+.filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(2, calc(var(--space-12) * 4)) auto;
+  align-items: end;
+  gap: var(--space-4);
+}
+
+.search {
+  min-width: 0;
+}
+
+.clear {
+  padding: 0 var(--space-2);
+}
+
+/* Same box as a Field label (text-sm line + the 6px Field gap), so hydrating doesn't shift the inputs. */
+.labelSkeleton {
+  width: var(--space-12);
+  height: calc(var(--text-sm) * var(--leading-normal));
+  margin-bottom: calc(var(--space-1) * 1.5);
+}
+
+.controlSkeleton {
+  height: var(--space-10);
+}
+
+/* Mobile design: search on its own row, Type and Status side by side beneath it. */
+@media (max-width: 640px) {
+  .filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+
+  .search {
+    grid-column: 1 / -1;
+  }
+
+  .clear {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 640px), (pointer: coarse) {
+  .controlSkeleton {
+    height: var(--touch-target);
+  }
+}

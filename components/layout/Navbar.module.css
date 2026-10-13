@@ -48,12 +48,36 @@
   font-weight: var(--weight-semibold);
 }
 
+/* Mobile design: logo and menu on top, the section links as a row of tabs underneath. */
 @media (max-width: 640px) {
-  .links {
-    display: none;
+  .inner {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    /* The desktop gap would also space the wrapped rows apart; only columns need it here. */
+    gap: 0 var(--space-4);
+    height: auto;
   }
 
-  .inner {
-    justify-content: space-between;
+  .logo {
+    display: flex;
+    align-items: center;
+    min-height: var(--navbar-height);
+  }
+
+  .links {
+    order: 1;
+    flex-basis: 100%;
+    gap: var(--space-6);
+  }
+
+  .link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--touch-target);
+    border-bottom: 2px solid transparent;
+  }
+
+  .active {
+    border-bottom-color: var(--color-primary);
   }
 }

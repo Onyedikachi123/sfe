@@ -18,6 +18,11 @@
   box-shadow: var(--shadow-overlay);
 }
 
+/* The panel takes focus on open so screen readers announce the dialog; it is not a control, so no ring. */
+.panel:focus {
+  outline: none;
+}
+
 .header {
   display: flex;
   align-items: center;
@@ -38,7 +43,9 @@
   justify-content: center;
   width: 32px;
   height: 32px;
+  border: 0;
   border-radius: var(--radius-md);
+  background: none;
   color: var(--color-text-muted);
   cursor: pointer;
 }
@@ -65,5 +72,24 @@
     width: 100%;
     max-height: 90vh;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  /* Grab handle from the mobile design; decorative, the sheet closes via the button or backdrop. */
+  .panel::before {
+    content: '';
+    align-self: center;
+    flex-shrink: 0;
+    width: var(--space-10);
+    height: var(--space-1);
+    margin-top: var(--space-2);
+    border-radius: var(--radius-full);
+    background: var(--color-border-strong);
+  }
+}
+
+@media (max-width: 640px), (pointer: coarse) {
+  .close {
+    width: var(--touch-target);
+    height: var(--touch-target);
   }
 }

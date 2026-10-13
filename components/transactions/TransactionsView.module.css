@@ -1,0 +1,50 @@
+/* Reserves one line so the header doesn't move when the count arrives. */
+.subtitle {
+  min-height: calc(var(--text-md) * var(--leading-normal));
+  margin-top: var(--space-1);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.subtitleSkeleton {
+  width: calc(var(--space-12) * 2);
+  margin-top: var(--space-1);
+}
+
+.filters {
+  margin: var(--space-6) 0 var(--space-5);
+}
+
+.inlineError {
+  margin-bottom: var(--space-4);
+}
+
+/* Where paging scrolls back to; clears the sticky navbar. */
+.results {
+  scroll-margin-top: calc(var(--navbar-height) + var(--space-4));
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.range {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* The mobile design drops the range and lets the pager take the full width. */
+@media (max-width: 640px) {
+  .range {
+    display: none;
+  }
+
+  /* The navbar gains a row of tabs on mobile, so clear that too. */
+  .results {
+    scroll-margin-top: calc(var(--navbar-height) + var(--touch-target) + var(--space-4));
+  }
+}
