@@ -1,6 +1,6 @@
 import type { SelectHTMLAttributes } from 'react'
 import { cx } from '@/lib/cx'
-import { Field } from '../Field'
+import { Field, useFieldIds } from '../Field'
 import { Icon } from '../Icon'
 import styles from './Select.module.css'
 
@@ -16,11 +16,19 @@ export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement
   fieldClassName?: string
 }
 
-export function Select({ label, hideLabel, options, fieldClassName, className, ...rest }: SelectProps) {
+export function Select({ label, hideLabel, options, fieldClassName, className, id, ...rest }: SelectProps) {
+  const { controlId, descriptionId } = useFieldIds(id)
+
   return (
-    <Field label={label} hideLabel={hideLabel} className={fieldClassName}>
+    <Field
+      label={label}
+      controlId={controlId}
+      descriptionId={descriptionId}
+      hideLabel={hideLabel}
+      className={fieldClassName}
+    >
       <div className={styles.control}>
-        <select className={cx(styles.select, className)} {...rest}>
+        <select id={controlId} className={cx(styles.select, className)} {...rest}>
           {options.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
