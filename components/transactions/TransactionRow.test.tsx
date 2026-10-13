@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { Transaction } from '@/types/api'
 import { TransactionRow } from './TransactionRow'
 
@@ -34,5 +35,45 @@ describe('TransactionRow', () => {
 
     expect(screen.getByText(/Fee \$15\.00/)).toBeInTheDocument()
     expect(screen.queryByText(/Fee ₦/)).toBeNull()
+  })
+
+  it('shows only the time, and no fee, when grouped under a day heading', () => {
+    render(
+      <TransactionRow
+        variant="grouped"
+        transaction={{ ...transaction, type: 'withdrawal', currency: 'USD', fee: 1500 }}
+      />
+    )
+
+    expect(screen.getByText(/^\d{2}:\d{2}$/)).toBeInTheDocument()
+    expect(screen.queryByText(/Fee/)).toBeNull()
+    expect(screen.queryByText(/2026/)).toBeNull()
+  })
+
+  it('shows the status as a labelled badge', () => {
+    render(<TransactionRow transaction={{ ...transaction, status: 'pending' }} />)
+    expect(screen.getByText('Pending')).toBeInTheDocument()
+  })
+
+  it('shows the counterparty initials instead of the type icon for transfers', () => {
+    const { container } = render(
+      <TransactionRow
+        transaction={{
+          ...transaction,
+          type: 'transfer_in',
+          counterparty: 'Ada Okafor',
+          narration: 'Transfer from Ada Okafor',
+        }}
+      />
+    )
+    expect(screen.getByText('AO')).toBeInTheDocument()
+    expect(container.querySelector('svg')).toBeNull()
+  })
+
+  it('calls onSelect with the transaction', async () => {
+    const onSelect = vi.fn()
+    render(<TransactionRow transaction={transaction} onSelect={onSelect} />)
+    await userEvent.click(screen.getByRole('button'))
+    expect(onSelect).toHaveBeenCalledWith(transaction)
   })
 })

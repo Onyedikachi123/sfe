@@ -1,7 +1,7 @@
 import type { Transaction, TransactionType } from '@/types/api'
 import { Icon, type IconName, Money } from '@/components/ui'
-import { formatDateTime, formatMoney, TRANSACTION_TYPE_LABELS } from '@/lib/format'
-import { StatusDot } from './StatusDot'
+import { formatDateTime, formatMoney, formatTime, getInitials, TRANSACTION_TYPE_LABELS } from '@/lib/format'
+import { StatusBadge } from './StatusBadge'
 import styles from './TransactionRow.module.css'
 
 const TYPE_ICONS: Record<TransactionType, IconName> = {
@@ -19,21 +19,32 @@ const CREDIT_TYPES: TransactionType[] = ['deposit', 'transfer_in', 'conversion']
 export interface TransactionRowProps {
   transaction: Transaction
   onSelect?: (transaction: Transaction) => void
+  /**
+   * `grouped` rows sit under a day heading, so they show only the time; the fee is shown in the
+   * details view instead. `standalone` rows (e.g. the dashboard) show date, time and fee.
+   */
+  variant?: 'standalone' | 'grouped'
 }
 
-export function TransactionRow({ transaction: tx, onSelect }: TransactionRowProps) {
+export function TransactionRow({ transaction: tx, onSelect, variant = 'standalone' }: TransactionRowProps) {
   const isCredit = CREDIT_TYPES.includes(tx.type)
+  // A person or company gets their initials, like the design; everything else gets the type icon.
+  const initials = tx.counterparty ? getInitials(tx.counterparty) : ''
 
   return (
     <button type="button" className={styles.row} onClick={() => onSelect?.(tx)}>
-      <span className={styles.icon}>
-        <Icon name={TYPE_ICONS[tx.type]} size={18} />
+      <span className={styles.icon} aria-hidden>
+        {initials ? (
+          <span className={styles.initials}>{initials}</span>
+        ) : (
+          <Icon name={TYPE_ICONS[tx.type]} size={18} />
+        )}
       </span>
       <span className={styles.main}>
         <span className={styles.title}>{TRANSACTION_TYPE_LABELS[tx.type]}</span>
         <span className={styles.narration}>{tx.narration}</span>
       </span>
-      <StatusDot status={tx.status} />
+      <StatusBadge status={tx.status} className={styles.status} />
       <span className={styles.end}>
         <Money
           amount={tx.amount}
@@ -42,8 +53,14 @@ export function TransactionRow({ transaction: tx, onSelect }: TransactionRowProp
           className={isCredit ? styles.credit : styles.amount}
         />
         <span className={styles.meta}>
-          {formatDateTime(tx.createdAt)}
-          {tx.fee > 0 && ` · Fee ${formatMoney(tx.fee, tx.currency)}`}
+          {variant === 'grouped' ? (
+            formatTime(tx.createdAt)
+          ) : (
+            <>
+              {formatDateTime(tx.createdAt)}
+              {tx.fee > 0 && ` · Fee ${formatMoney(tx.fee, tx.currency)}`}
+            </>
+          )}
         </span>
       </span>
     </button>
