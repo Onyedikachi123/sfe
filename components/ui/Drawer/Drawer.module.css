@@ -18,6 +18,11 @@
   box-shadow: var(--shadow-overlay);
 }
 
+/* The panel takes focus on open so screen readers announce the dialog; it is not a control, so no ring. */
+.panel:focus {
+  outline: none;
+}
+
 .header {
   display: flex;
   align-items: center;
@@ -38,7 +43,9 @@
   justify-content: center;
   width: 32px;
   height: 32px;
+  border: 0;
   border-radius: var(--radius-md);
+  background: none;
   color: var(--color-text-muted);
   cursor: pointer;
 }
