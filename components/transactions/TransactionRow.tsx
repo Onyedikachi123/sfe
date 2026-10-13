@@ -1,6 +1,6 @@
 import type { Transaction, TransactionType } from '@/types/api'
 import { Icon, type IconName, Money } from '@/components/ui'
-import { formatDateTime, TRANSACTION_TYPE_LABELS } from '@/lib/format'
+import { formatDateTime, formatMoney, TRANSACTION_TYPE_LABELS } from '@/lib/format'
 import { StatusDot } from './StatusDot'
 import styles from './TransactionRow.module.css'
 
@@ -43,7 +43,7 @@ export function TransactionRow({ transaction: tx, onSelect }: TransactionRowProp
         />
         <span className={styles.meta}>
           {formatDateTime(tx.createdAt)}
-          {tx.fee > 0 && ` · Fee ₦${tx.fee}`}
+          {tx.fee > 0 && ` · Fee ${formatMoney(tx.fee, tx.currency)}`}
         </span>
       </span>
     </button>

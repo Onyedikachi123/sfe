@@ -24,4 +24,15 @@ describe('TransactionRow', () => {
     expect(screen.getByText(MARKUP)).toBeInTheDocument()
     expect(container.querySelector('img')).toBeNull()
   })
+
+  it('shows the fee in the transaction currency, formatted from minor units', () => {
+    render(
+      <TransactionRow
+        transaction={{ ...transaction, type: 'withdrawal', currency: 'USD', amount: 150000, fee: 1500 }}
+      />
+    )
+
+    expect(screen.getByText(/Fee \$15\.00/)).toBeInTheDocument()
+    expect(screen.queryByText(/Fee ₦/)).toBeNull()
+  })
 })
