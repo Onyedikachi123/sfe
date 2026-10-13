@@ -88,6 +88,12 @@ export interface ApiSuccess<T> {
   meta?: PageMeta
 }
 
+/** A list response; unlike ApiSuccess, `meta` is guaranteed. */
+export interface Paginated<T> {
+  data: T[]
+  meta: PageMeta
+}
+
 export interface ApiErrorBody {
   error: { code: string; message: string }
 }

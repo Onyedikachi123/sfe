@@ -1,13 +1,14 @@
 import type {
   Conversion,
   Currency,
+  Paginated,
   Rate,
   Transaction,
   TransactionStatus,
   TransactionType,
   User,
 } from '@/types/api'
-import { api } from './client'
+import { api, ApiError, GENERIC_MESSAGE } from './client'
 
 export interface TransactionQuery {
   page?: number
@@ -33,8 +34,15 @@ function toSearchParams(query: object): string {
 
 export const getMe = (init?: RequestInit) => api.get<User>('/me', init)
 
-export const getTransactions = (query: TransactionQuery = {}, init?: RequestInit) =>
-  api.get<Transaction[]>(`/transactions${toSearchParams(query)}`, init)
+export async function getTransactions(
+  query: TransactionQuery = {},
+  init?: RequestInit
+): Promise<Paginated<Transaction>> {
+  const { data, meta } = await api.get<Transaction[]>(`/transactions${toSearchParams(query)}`, init)
+  // Pagination can't work without meta, so a list response missing it is a broken response.
+  if (!meta) throw new ApiError(200, 'UNKNOWN', GENERIC_MESSAGE)
+  return { data, meta }
+}
 
 export const getTransaction = (id: string, init?: RequestInit) =>
   api.get<Transaction>(`/transactions/${encodeURIComponent(id)}`, init)

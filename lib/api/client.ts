@@ -2,7 +2,7 @@ import type { ApiErrorBody, ApiSuccess } from '@/types/api'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? '/api'
 
-const GENERIC_MESSAGE = 'Something went wrong. Please try again.'
+export const GENERIC_MESSAGE = 'Something went wrong. Please try again.'
 const NETWORK_MESSAGE = 'Could not reach the server. Check your connection and try again.'
 
 export class ApiError extends Error {
