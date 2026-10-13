@@ -1,0 +1,16 @@
+/* Reserves one line so the header doesn't move when the count arrives. */
+.subtitle {
+  min-height: calc(var(--text-md) * var(--leading-normal));
+  margin-top: var(--space-1);
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+}
+
+.subtitleSkeleton {
+  width: calc(var(--space-12) * 2);
+  margin-top: var(--space-1);
+}
+
+.filters {
+  margin: var(--space-6) 0 var(--space-5);
+}

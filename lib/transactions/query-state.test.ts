@@ -6,14 +6,18 @@ import {
 } from '@/types/api'
 import {
   DEFAULT_STATE,
+  hasActiveFilters,
   hasInvalidDateRange,
   isIsoDate,
   MAX_QUERY_LENGTH,
+  normalizeSearch,
   PAGE_SIZE,
   parseTransactionsSearchParams,
   toApiQuery,
   toSearchParams,
   type TransactionsState,
+  withFilters,
+  withoutFilters,
 } from './query-state'
 
 const parse = (query: string) => parseTransactionsSearchParams(new URLSearchParams(query))
@@ -240,5 +244,44 @@ describe('toApiQuery', () => {
   it('never includes the drawer selection or the mock scenario', () => {
     expect(toApiQuery(FULL_STATE)).not.toHaveProperty('txn')
     expect(toApiQuery(FULL_STATE)).not.toHaveProperty('scenario')
+  })
+})
+
+describe('normalizeSearch', () => {
+  it('matches what the URL parser produces', () => {
+    expect(normalizeSearch('  net flix ')).toBe('net flix')
+    expect(normalizeSearch(null)).toBe('')
+    expect(normalizeSearch('x'.repeat(MAX_QUERY_LENGTH + 5))).toHaveLength(MAX_QUERY_LENGTH)
+  })
+})
+
+describe('hasActiveFilters', () => {
+  it('is false for the defaults, even with a page, drawer or scenario set', () => {
+    expect(hasActiveFilters(DEFAULT_STATE)).toBe(false)
+    expect(hasActiveFilters({ ...DEFAULT_STATE, page: 4, txn: 'txn_1', scenario: 'slow' })).toBe(false)
+  })
+
+  it.each([
+    { q: 'net' },
+    { type: 'deposit' as const },
+    { status: 'failed' as const },
+    { currency: 'GHS' as const },
+    { from: '2026-09-01' },
+    { to: '2026-09-30' },
+  ])('is true when %o is set', (patch) => {
+    expect(hasActiveFilters({ ...DEFAULT_STATE, ...patch })).toBe(true)
+  })
+})
+
+describe('withFilters', () => {
+  it('applies the change, resets to page 1 and closes the drawer', () => {
+    const next = withFilters({ ...FULL_STATE, page: 5 }, { status: 'pending' })
+    expect(next).toEqual({ ...FULL_STATE, status: 'pending', page: 1, txn: null })
+  })
+})
+
+describe('withoutFilters', () => {
+  it('returns the defaults but keeps the mock scenario', () => {
+    expect(withoutFilters(FULL_STATE)).toEqual({ ...DEFAULT_STATE, scenario: 'slow' })
   })
 })

@@ -82,13 +82,14 @@ function parseTxn(value: string | null): string | null {
   return value !== null && /^[A-Za-z0-9_-]{1,64}$/.test(value) ? value : null
 }
 
-function parseQuery(value: string | null): string {
+/** The form a search term takes in the URL; the search box uses it to know when it is in sync. */
+export function normalizeSearch(value: string | null): string {
   return (value ?? '').trim().slice(0, MAX_QUERY_LENGTH).trim()
 }
 
 export function parseTransactionsSearchParams(params: Pick<URLSearchParams, 'get'>): TransactionsState {
   return {
-    q: parseQuery(params.get('q')),
+    q: normalizeSearch(params.get('q')),
     type: oneOf(TRANSACTION_TYPES, params.get('type')),
     status: oneOf(TRANSACTION_STATUSES, params.get('status')),
     currency: oneOf(CURRENCIES, params.get('currency')),
@@ -117,6 +118,29 @@ export function toSearchParams(state: TransactionsState): URLSearchParams {
   if (state.scenario) params.set(SCENARIO_PARAM, state.scenario)
   return params
 }
+
+type Filters = Pick<TransactionsState, 'q' | 'type' | 'status' | 'currency' | 'from' | 'to'>
+
+/** Whether the list is narrowed at all; drives "Clear filters" and "results" vs "transactions". */
+export const hasActiveFilters = (state: TransactionsState): boolean =>
+  Boolean(state.q || state.type || state.status || state.currency || state.from || state.to)
+
+/**
+ * Applies a filter or search change. Any change of what the list contains starts again at page 1
+ * and closes the details drawer, whose row may no longer be in the list.
+ */
+export const withFilters = (state: TransactionsState, patch: Partial<Filters>): TransactionsState => ({
+  ...state,
+  ...patch,
+  page: DEFAULT_STATE.page,
+  txn: null,
+})
+
+/** Removes every filter and the search, keeping only what isn't page state (the mock scenario). */
+export const withoutFilters = (state: TransactionsState): TransactionsState => ({
+  ...DEFAULT_STATE,
+  scenario: state.scenario,
+})
 
 /** Both dates are valid on their own but the range is backwards; the page must not fetch. */
 export const hasInvalidDateRange = ({ from, to }: Pick<TransactionsState, 'from' | 'to'>): boolean =>

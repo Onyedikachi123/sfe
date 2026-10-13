@@ -1,0 +1,25 @@
+.filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(2, calc(var(--space-12) * 4)) auto;
+  align-items: end;
+  gap: var(--space-4);
+}
+
+.search {
+  min-width: 0;
+}
+
+.clear {
+  padding: 0 var(--space-2);
+}
+
+/* Same box as a Field label (text-sm line + the 6px Field gap), so hydrating doesn't shift the inputs. */
+.labelSkeleton {
+  width: var(--space-12);
+  height: calc(var(--text-sm) * var(--leading-normal));
+  margin-bottom: calc(var(--space-1) * 1.5);
+}
+
+.controlSkeleton {
+  height: var(--space-10);
+}
