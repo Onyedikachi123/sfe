@@ -1,10 +1,49 @@
 .list {
+  position: relative;
+}
+
+.rows {
   transition: opacity var(--duration-normal) var(--ease-out);
 }
 
-/* Previous results stay visible while the next ones load (per the design), just dimmed. */
-.stale {
+/* Previous results stay visible while the next ones load (per the design), just dimmed. The
+   progress bar sits outside the dimmed rows so it stays at full strength. */
+.stale .rows {
   opacity: 0.6;
+}
+
+.progress {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 1;
+  height: calc(var(--space-1) / 2);
+  overflow: hidden;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.progress::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 30%;
+  background: var(--color-primary);
+  animation: progress calc(var(--duration-normal) * 6) var(--ease-out) infinite;
+}
+
+@keyframes progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(340%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress::after {
+    width: 100%;
+    animation: none;
+  }
 }
 
 .day {

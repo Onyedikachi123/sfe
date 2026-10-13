@@ -183,3 +183,109 @@ describe('TransactionsView', () => {
     expect(router.push).not.toHaveBeenCalled()
   })
 })
+
+const pageOf = (page: number, count: number, total = 237): Paginated<Transaction> => ({
+  data: Array.from({ length: count }, (_, i) => tx(`p${page}_${i}`, { narration: `Row ${page}.${i}` })),
+  meta: { page, limit: 20, total, totalPages: Math.max(1, Math.ceil(total / 20)) },
+})
+
+describe('TransactionsView pagination', () => {
+  it('shows the range and the pager', async () => {
+    listMock.mockResolvedValue(pageOf(1, 20))
+    renderAt('')
+
+    expect(await screen.findByText('Showing 1–20 of 237')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('shows the partial range on the last page and disables Next', async () => {
+    listMock.mockResolvedValue(pageOf(12, 17))
+    renderAt('page=12')
+
+    expect(await screen.findByText('Showing 221–237 of 237')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled()
+  })
+
+  it('pushes the next page, keeping filters and closing the drawer', async () => {
+    listMock.mockResolvedValue(pageOf(1, 20))
+    renderAt('status=failed&txn=txn_a')
+    await screen.findByText('Showing 1–20 of 237')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next page' }))
+
+    expect(router.push).toHaveBeenCalledWith('/transactions?status=failed&page=2', { scroll: false })
+  })
+
+  it('keeps the previous page on screen, marked as loading, while the next one loads', async () => {
+    let resolvePage2: (value: Paginated<Transaction>) => void = () => {}
+    listMock
+      .mockResolvedValueOnce(pageOf(1, 20))
+      .mockReturnValueOnce(new Promise((resolve) => (resolvePage2 = resolve)))
+    const { navigateTo } = renderAt('')
+    await screen.findByText('Row 1.0')
+
+    navigateTo('page=2')
+
+    expect(screen.getByText('Row 1.0')).toBeInTheDocument()
+    expect(screen.getByText('Loading transactions')).toBeInTheDocument()
+    // The old rows themselves are marked busy: no full skeleton replaced them.
+    expect(screen.getByText('Row 1.0').closest('[aria-busy="true"]')).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Page 2' })).toHaveAttribute('aria-current', 'page')
+
+    resolvePage2(pageOf(2, 20))
+    expect(await screen.findByText('Row 2.0')).toBeInTheDocument()
+    expect(screen.queryByText('Row 1.0')).toBeNull()
+  })
+
+  it('replaces an out-of-range page with the last page, without flashing "no results"', async () => {
+    listMock.mockResolvedValue({ data: [], meta: { page: 99, limit: 20, total: 237, totalPages: 12 } })
+    renderAt('page=99&status=successful')
+
+    await waitFor(() =>
+      expect(router.replace).toHaveBeenCalledWith('/transactions?status=successful&page=12', {
+        scroll: false,
+      })
+    )
+    expect(router.push).not.toHaveBeenCalled()
+    expect(screen.queryByText('No transactions match your filters')).toBeNull()
+    expect(screen.getByText('Loading transactions')).toBeInTheDocument()
+  })
+
+  it('scrolls back to the top of the list when it has scrolled out of view', async () => {
+    listMock.mockResolvedValue(pageOf(1, 20))
+    const { container } = renderAt('')
+    await screen.findByText('Showing 1–20 of 237')
+
+    const results = container.querySelector('[class*="results"]') as HTMLElement
+    results.scrollIntoView = vi.fn()
+    vi.spyOn(results, 'getBoundingClientRect').mockReturnValue({ top: -400 } as DOMRect)
+    window.matchMedia = vi.fn().mockReturnValue({ matches: false })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+
+    expect(results.scrollIntoView).toHaveBeenCalledWith({ block: 'start', behavior: 'smooth' })
+  })
+
+  it('does not scroll when the top of the list is already visible', async () => {
+    listMock.mockResolvedValue(pageOf(1, 20))
+    const { container } = renderAt('')
+    await screen.findByText('Showing 1–20 of 237')
+
+    const results = container.querySelector('[class*="results"]') as HTMLElement
+    results.scrollIntoView = vi.fn()
+    vi.spyOn(results, 'getBoundingClientRect').mockReturnValue({ top: 300 } as DOMRect)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next page' }))
+
+    expect(results.scrollIntoView).not.toHaveBeenCalled()
+  })
+
+  it('hides the pager when everything fits on one page', async () => {
+    listMock.mockResolvedValue(pageOf(1, 4, 4))
+    renderAt('')
+
+    expect(await screen.findByText('Showing 1–4 of 4')).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Pagination' })).toBeNull()
+  })
+})

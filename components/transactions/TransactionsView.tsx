@@ -1,6 +1,6 @@
 'use client'
-import { useCallback } from 'react'
-import { Button, Card, EmptyState, Skeleton } from '@/components/ui'
+import { useCallback, useEffect, useRef } from 'react'
+import { Button, Card, EmptyState, Pagination, Skeleton } from '@/components/ui'
 import {
   hasActiveFilters,
   hasInvalidDateRange,
@@ -41,6 +41,28 @@ export function TransactionsView() {
     navigate(withoutFilters(state))
   }
 
+  // The API answers a page past the end with 200 and no rows; send the user to the last real page
+  // instead of showing an empty list. Placeholder data belongs to the previous query, so skip it.
+  const meta = query.data?.meta
+  const isOutOfRange = Boolean(meta && !query.isPlaceholderData && meta.page > meta.totalPages)
+  useEffect(() => {
+    if (isOutOfRange && meta) navigate({ ...state, page: meta.totalPages }, 'replace')
+  }, [isOutOfRange, meta, state, navigate])
+
+  const resultsRef = useRef<HTMLDivElement>(null)
+  const goToPage = (page: number) => {
+    navigate({ ...state, page, txn: null })
+    // Bring the top of the list back into view, but only if it has scrolled away; scroll-margin-top
+    // accounts for the sticky navbar.
+    const results = resultsRef.current
+    if (!results) return
+    const margin = parseFloat(getComputedStyle(results).scrollMarginTop) || 0
+    if (results.getBoundingClientRect().top < margin) {
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      results.scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' })
+    }
+  }
+
   return (
     <>
       <p className={styles.subtitle}>
@@ -61,13 +83,17 @@ export function TransactionsView() {
         />
       </div>
 
-      <TransactionsContent
-        state={state}
-        query={query}
-        filtered={filtered}
-        onClearFilters={clearFilters}
-        navigate={navigate}
-      />
+      <div ref={resultsRef} className={styles.results}>
+        <TransactionsContent
+          state={state}
+          query={query}
+          filtered={filtered}
+          isOutOfRange={isOutOfRange}
+          onClearFilters={clearFilters}
+          onPageChange={goToPage}
+          navigate={navigate}
+        />
+      </div>
     </>
   )
 }
@@ -76,11 +102,21 @@ interface TransactionsContentProps {
   state: TransactionsState
   query: ReturnType<typeof useTransactions>
   filtered: boolean
+  isOutOfRange: boolean
   onClearFilters: () => void
+  onPageChange: (page: number) => void
   navigate: ReturnType<typeof useTransactionsUrl>['navigate']
 }
 
-function TransactionsContent({ state, query, filtered, onClearFilters, navigate }: TransactionsContentProps) {
+function TransactionsContent({
+  state,
+  query,
+  filtered,
+  isOutOfRange,
+  onClearFilters,
+  onPageChange,
+  navigate,
+}: TransactionsContentProps) {
   // Only reachable from a hand-edited URL: the page has no date inputs. Never fetched (see useTransactions).
   if (hasInvalidDateRange(state)) {
     return (
@@ -123,7 +159,12 @@ function TransactionsContent({ state, query, filtered, onClearFilters, navigate 
 
   if (!query.data) return <TransactionListSkeleton />
 
-  if (query.data.data.length === 0) {
+  // Keep loading, not "no results", while a page is clamped or while the result being kept on
+  // screen is an empty one from the previous query.
+  const rows = query.data.data
+  if (isOutOfRange || (query.isPlaceholderData && rows.length === 0)) return <TransactionListSkeleton />
+
+  if (rows.length === 0) {
     return (
       <Card padding="none">
         {filtered ? (
@@ -150,14 +191,25 @@ function TransactionsContent({ state, query, filtered, onClearFilters, navigate 
     )
   }
 
+  const { page, limit, total, totalPages } = query.data.meta
+  const first = (page - 1) * limit + 1
   return (
-    <TransactionList
-      transactions={query.data.data}
-      // When the data was fetched, not "now" at render: keeps rendering pure, and matches what the
-      // server meant by "today" closely enough for a list that refetches every 30 s at most.
-      now={new Date(query.dataUpdatedAt)}
-      isStale={query.isPlaceholderData}
-    />
+    <>
+      <TransactionList
+        transactions={rows}
+        // When the data was fetched, not "now" at render: keeps rendering pure, and matches what the
+        // server meant by "today" closely enough for a list that refetches every 30 s at most.
+        now={new Date(query.dataUpdatedAt)}
+        isStale={query.isPlaceholderData}
+      />
+      <div className={styles.footer}>
+        <p className={styles.range}>
+          Showing {first}–{first + rows.length - 1} of {countFormatter.format(total)}
+        </p>
+        {/* The URL's page, so the pager reacts at once while the previous rows stay on screen. */}
+        <Pagination page={state.page} totalPages={totalPages} onPageChange={onPageChange} />
+      </div>
+    </>
   )
 }
 

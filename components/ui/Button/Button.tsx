@@ -16,6 +16,8 @@ export interface ButtonProps {
   onClick?: () => void
   className?: string
   'aria-label'?: string
+  /** Marks the button for the current item in a set, e.g. the current page in a pager. */
+  'aria-current'?: 'page' | 'step' | 'true'
 }
 
 export function Button({

@@ -19,18 +19,25 @@ export function TransactionList({ transactions, now, onSelect, isStale = false }
   const id = useId()
   return (
     <div className={cx(styles.list, isStale && styles.stale)} aria-busy={isStale}>
-      <Card padding="none">
-        {groupByDay(transactions, now).map((group) => (
-          <section key={group.key} aria-labelledby={`${id}-${group.key}`}>
-            <h2 id={`${id}-${group.key}`} className={styles.day}>
-              {group.label}
-            </h2>
-            {group.transactions.map((tx) => (
-              <TransactionRow key={tx.id} transaction={tx} variant="grouped" onSelect={onSelect} />
-            ))}
-          </section>
-        ))}
-      </Card>
+      {/* Always mounted so screen readers hear the change; the bar is the visual cue. */}
+      <span role="status" className="visually-hidden">
+        {isStale ? 'Loading transactions' : ''}
+      </span>
+      {isStale && <span className={styles.progress} aria-hidden />}
+      <div className={styles.rows}>
+        <Card padding="none">
+          {groupByDay(transactions, now).map((group) => (
+            <section key={group.key} aria-labelledby={`${id}-${group.key}`}>
+              <h2 id={`${id}-${group.key}`} className={styles.day}>
+                {group.label}
+              </h2>
+              {group.transactions.map((tx) => (
+                <TransactionRow key={tx.id} transaction={tx} variant="grouped" onSelect={onSelect} />
+              ))}
+            </section>
+          ))}
+        </Card>
+      </div>
     </div>
   )
 }
