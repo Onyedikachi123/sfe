@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useRef, type ReactNode } from 'react'
 import type { Transaction } from '@/types/api'
-import { Button, Card, Drawer, EmptyState, Pagination, Skeleton } from '@/components/ui'
+import { Alert, Button, Card, Drawer, EmptyState, Pagination, Skeleton } from '@/components/ui'
 import {
   hasActiveFilters,
   hasInvalidDateRange,
@@ -38,6 +38,8 @@ export function TransactionsView() {
   const filtered = hasActiveFilters(state)
   // A backwards range never fetches, so it stays "pending" forever; don't show a skeleton for it.
   const isLoading = query.isPending && !hasInvalidDateRange(state)
+  // If the latest request failed, keep showing the last results that did load (see useTransactions).
+  const shown = query.data ?? (query.isError ? query.lastLoaded : undefined)
   const clearFilters = () => {
     setSearch('')
     navigate(withoutFilters(state))
@@ -84,10 +86,16 @@ export function TransactionsView() {
 
   return (
     <>
-      <p className={styles.subtitle}>
-        {query.data
-          ? countLabel(query.data.meta.total, filtered)
-          : isLoading && <Skeleton className={styles.subtitleSkeleton} />}
+      {/* The one polite live region for the list: announces loading, then the new count. */}
+      <p className={styles.subtitle} aria-live="polite" aria-atomic="true">
+        {shown ? (
+          countLabel(shown.meta.total, filtered)
+        ) : isLoading ? (
+          <>
+            <Skeleton className={styles.subtitleSkeleton} />
+            <span className="visually-hidden">Loading transactions</span>
+          </>
+        ) : null}
       </p>
 
       <div className={styles.filters}>
@@ -162,7 +170,9 @@ function TransactionsContent({
     )
   }
 
-  if (query.isError && !query.data) {
+  const data = query.data ?? (query.isError ? query.lastLoaded : undefined)
+
+  if (query.isError && !data) {
     return (
       <Card padding="none">
         <EmptyState
@@ -181,44 +191,66 @@ function TransactionsContent({
     )
   }
 
-  if (!query.data) return <TransactionListSkeleton />
+  if (!data) return <TransactionListSkeleton />
 
   // Keep loading, not "no results", while a page is clamped or while the result being kept on
   // screen is an empty one from the previous query.
-  const rows = query.data.data
+  const rows = data.data
   if (isOutOfRange || (query.isPlaceholderData && rows.length === 0)) return <TransactionListSkeleton />
+
+  // Shown above kept results when a later request failed: they stay usable, the failure is explained.
+  const staleError = query.isError && (
+    <Alert
+      className={styles.inlineError}
+      action={
+        <Button
+          size="sm"
+          variant="secondary"
+          iconLeft="refresh"
+          onClick={() => void query.refetch()}
+          disabled={query.isFetching}
+        >
+          Try again
+        </Button>
+      }
+    >
+      We couldn&apos;t load the latest results. Showing what loaded before.
+    </Alert>
+  )
 
   if (rows.length === 0) {
     return (
-      <Card padding="none">
-        {filtered ? (
-          <EmptyState
-            icon="search"
-            role="status"
-            title="No transactions match your filters"
-            description="Try a different search term or remove some filters."
-            action={
-              <Button variant="secondary" onClick={onClearFilters}>
-                Clear filters
-              </Button>
-            }
-          />
-        ) : (
-          <EmptyState
-            icon="inbox"
-            role="status"
-            title="No transactions yet"
-            description="When you add money, send a transfer or pay with your card, it will show up here."
-          />
-        )}
-      </Card>
+      <>
+        {staleError}
+        <Card padding="none">
+          {filtered ? (
+            <EmptyState
+              icon="search"
+              title="No transactions match your filters"
+              description="Try a different search term or remove some filters."
+              action={
+                <Button variant="secondary" onClick={onClearFilters}>
+                  Clear filters
+                </Button>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon="inbox"
+              title="No transactions yet"
+              description="When you add money, send a transfer or pay with your card, it will show up here."
+            />
+          )}
+        </Card>
+      </>
     )
   }
 
-  const { page, limit, total, totalPages } = query.data.meta
+  const { page, limit, total, totalPages } = data.meta
   const first = (page - 1) * limit + 1
   return (
     <>
+      {staleError}
       <TransactionList
         transactions={rows}
         // When the data was fetched, not "now" at render: keeps rendering pure, and matches what the

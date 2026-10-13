@@ -141,6 +141,21 @@ describe('useTransactions', () => {
     expect(listMock).toHaveBeenCalledTimes(1)
   })
 
+  it('remembers the last successful response after a later request fails', async () => {
+    listMock.mockResolvedValueOnce(page(1, ['a'])).mockRejectedValue(serverError())
+    const { result, rerender } = renderHook((state: TransactionsState) => useTransactions(state), {
+      wrapper,
+      initialProps: DEFAULT_STATE,
+    })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    rerender({ ...DEFAULT_STATE, page: 2 })
+    await waitFor(() => expect(result.current.isError).toBe(true))
+
+    expect(result.current.data).toBeUndefined()
+    expect(result.current.lastLoaded?.data.map((row) => row.id)).toEqual(['a'])
+  })
+
   it('never fetches a backwards date range', async () => {
     const state = { ...DEFAULT_STATE, from: '2026-09-30', to: '2026-09-01' }
     const { result } = renderHook(() => useTransactions(state), { wrapper })

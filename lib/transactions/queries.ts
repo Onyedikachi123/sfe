@@ -5,6 +5,7 @@ import {
   useQueryClient,
   type QueryClient,
 } from '@tanstack/react-query'
+import { useState } from 'react'
 import type { Paginated, Transaction } from '@/types/api'
 import { ApiError } from '@/lib/api/client'
 import { getTransaction, getTransactions, type TransactionQuery } from '@/lib/api/endpoints'
@@ -26,15 +27,26 @@ export const isNotFoundError = (error: unknown): boolean => error instanceof Api
  * can never overwrite a newer one; the signal lets TanStack Query abort requests nobody is waiting
  * for. While the next page or filter loads, the previous rows stay on screen (`isPlaceholderData`).
  * A backwards date range never fetches: the page shows a validation message instead.
+ *
+ * `lastLoaded` is the most recent successful response for any query. TanStack Query only keeps
+ * previous data while the next request is pending; once it fails, `data` is gone. Keeping the last
+ * good result lets the page leave it on screen under an inline error instead of blanking it.
  */
 export function useTransactions(state: TransactionsState) {
   const query = toApiQuery(state)
-  return useQuery({
+  const result = useQuery({
     queryKey: transactionKeys.list(query),
     queryFn: hasInvalidDateRange(state) ? skipToken : ({ signal }) => getTransactions(query, { signal }),
     placeholderData: keepPreviousData,
     retry: retryOnceOnServerError,
   })
+
+  const [lastLoaded, setLastLoaded] = useState<Paginated<Transaction>>()
+  // Adjusting state while rendering (React's pattern for deriving from changing input) rather than
+  // in an effect, so there is never a render with the new error but without the kept data.
+  if (result.data && !result.isPlaceholderData && result.data !== lastLoaded) setLastLoaded(result.data)
+
+  return { ...result, lastLoaded }
 }
 
 /** A row from any list already in the cache, with when that list was fetched. */

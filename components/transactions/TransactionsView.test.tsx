@@ -48,7 +48,7 @@ function renderAt(query: string) {
     </QueryClientProvider>
   )
   const result = render(ui())
-  return { ...result, navigateTo: (next: string) => ((search = next), result.rerender(ui())) }
+  return { ...result, client, navigateTo: (next: string) => ((search = next), result.rerender(ui())) }
 }
 
 beforeEach(() => {
@@ -384,5 +384,74 @@ describe('TransactionsView details drawer', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Try again' }))
 
     expect(await within(dialog).findByText('ACM-FAR')).toBeInTheDocument()
+  })
+})
+
+describe('TransactionsView states', () => {
+  const serverError = () => new ApiError(500, 'INTERNAL_ERROR', 'Something went wrong. Please try again.')
+
+  it('announces loading and then the count through one polite live region', async () => {
+    let resolve: (value: Paginated<Transaction>) => void = () => {}
+    listMock.mockReturnValue(new Promise((r) => (resolve = r)))
+    renderAt('')
+
+    const live = screen.getByText('Loading transactions', { selector: 'p > span' }).parentElement!
+    expect(live).toHaveAttribute('aria-live', 'polite')
+    expect(live).toHaveAttribute('aria-atomic', 'true')
+
+    resolve(response([tx('a')], 237))
+    await waitFor(() => expect(live).toHaveTextContent('237 transactions'))
+  })
+
+  it('keeps the previous page visible with an inline error when the next page fails', async () => {
+    listMock.mockResolvedValueOnce(pageOf(1, 20)).mockRejectedValue(serverError())
+    const { navigateTo } = renderAt('')
+    await screen.findByText('Row 1.0')
+
+    navigateTo('page=2')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      "We couldn't load the latest results. Showing what loaded before."
+    )
+    expect(screen.getByText('Row 1.0')).toBeInTheDocument()
+    expect(screen.queryByText("We couldn't load your transactions")).toBeNull()
+    expect(screen.getByText('237 transactions')).toBeInTheDocument()
+  })
+
+  it('recovers from the inline error with Try again', async () => {
+    listMock
+      .mockResolvedValueOnce(pageOf(1, 20))
+      .mockRejectedValueOnce(serverError())
+      .mockRejectedValueOnce(serverError())
+    const { navigateTo } = renderAt('')
+    await screen.findByText('Row 1.0')
+    navigateTo('page=2')
+    await screen.findByRole('alert')
+
+    listMock.mockResolvedValue(pageOf(2, 20))
+    await userEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Try again' }))
+
+    expect(await screen.findByText('Row 2.0')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('keeps the rows and shows the inline error when a refresh of the same page fails', async () => {
+    listMock.mockResolvedValueOnce(pageOf(1, 20)).mockRejectedValue(serverError())
+    const { client } = renderAt('')
+    await screen.findByText('Row 1.0')
+
+    await client.refetchQueries()
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    expect(screen.getByText('Row 1.0')).toBeInTheDocument()
+  })
+
+  it('shows the full error card when nothing has loaded yet', async () => {
+    listMock.mockRejectedValue(serverError())
+    renderAt('')
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent("We couldn't load your transactions")
+    expect(alert).toHaveTextContent('Check your connection and try again.')
   })
 })

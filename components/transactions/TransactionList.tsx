@@ -47,7 +47,8 @@ const SKELETON_ROWS = 6
 export function TransactionListSkeleton() {
   return (
     <Card padding="none">
-      <div role="status" className={styles.skeleton}>
+      {/* Not a live region: the page subtitle announces loading, once. */}
+      <div className={styles.skeleton}>
         <span className="visually-hidden">Loading transactions</span>
         <div className={styles.day}>
           <Skeleton className={styles.dayLine} />

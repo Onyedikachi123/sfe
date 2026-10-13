@@ -15,6 +15,10 @@
   margin: var(--space-6) 0 var(--space-5);
 }
 
+.inlineError {
+  margin-bottom: var(--space-4);
+}
+
 /* Where paging scrolls back to; clears the sticky navbar. */
 .results {
   scroll-margin-top: calc(var(--navbar-height) + var(--space-4));
