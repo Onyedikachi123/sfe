@@ -285,3 +285,17 @@ describe('withoutFilters', () => {
     expect(withoutFilters(FULL_STATE)).toEqual({ ...DEFAULT_STATE, scenario: 'slow' })
   })
 })
+
+describe('currency filter', () => {
+  it('round-trips currency=GHS through the URL and into the API query', () => {
+    const state = parse('currency=GHS')
+
+    expect(state.currency).toBe('GHS')
+    expect(toSearchParams(state).toString()).toBe('currency=GHS')
+    expect(toApiQuery(state)).toMatchObject({ currency: 'GHS' })
+  })
+
+  it.each(['NGN', 'USD', 'GHS'] as const)('accepts %s', (currency) => {
+    expect(parse(`currency=${currency}`).currency).toBe(currency)
+  })
+})

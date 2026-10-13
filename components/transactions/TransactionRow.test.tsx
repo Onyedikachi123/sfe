@@ -37,6 +37,53 @@ describe('TransactionRow', () => {
     expect(screen.queryByText(/Fee ₦/)).toBeNull()
   })
 
+  it('renders a GHS transfer out as a GH₵ debit, with its fee in GH₵', () => {
+    render(
+      <TransactionRow
+        transaction={{
+          ...transaction,
+          type: 'transfer_out',
+          currency: 'GHS',
+          amount: 120000,
+          fee: 1200,
+          counterparty: 'Kwame Mensah',
+          narration: 'Transfer to Kwame Mensah',
+        }}
+      />
+    )
+
+    expect(screen.getByText('-GH₵1,200.00')).toBeInTheDocument()
+    expect(screen.getByText(/Fee GH₵12\.00/)).toBeInTheDocument()
+    expect(screen.queryByText(/₦/)).toBeNull()
+  })
+
+  it('renders a GHS transfer in as a GH₵ credit', () => {
+    render(
+      <TransactionRow
+        transaction={{
+          ...transaction,
+          type: 'transfer_in',
+          currency: 'GHS',
+          amount: 150050,
+          counterparty: 'Kwame Mensah',
+          narration: 'Transfer from Kwame Mensah',
+        }}
+      />
+    )
+
+    expect(screen.getByText('+GH₵1,500.50')).toBeInTheDocument()
+    expect(screen.queryByText(/₦|\$/)).toBeNull()
+  })
+
+  it('renders a USD amount with $', () => {
+    render(
+      <TransactionRow transaction={{ ...transaction, type: 'card_payment', currency: 'USD', amount: 1549 }} />
+    )
+
+    expect(screen.getByText('-$15.49')).toBeInTheDocument()
+    expect(screen.queryByText(/₦|GH₵/)).toBeNull()
+  })
+
   it('shows only the time, and no fee, when grouped under a day heading', () => {
     render(
       <TransactionRow
