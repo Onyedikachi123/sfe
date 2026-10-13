@@ -1,0 +1,27 @@
+.skeleton {
+  display: block;
+  background: var(--color-border);
+  animation: pulse calc(var(--duration-normal) * 7) var(--ease-out) infinite alternate;
+}
+
+/* min-height, so a caller's height always wins regardless of stylesheet order. */
+.line {
+  min-height: var(--space-3);
+  border-radius: var(--radius-sm);
+}
+
+.circle {
+  border-radius: var(--radius-full);
+}
+
+@keyframes pulse {
+  to {
+    background: var(--color-bg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
